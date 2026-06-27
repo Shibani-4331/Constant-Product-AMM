@@ -3,7 +3,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 use crate::state::Pool;
 use crate::error::AmmError;
 
-pub fn handler(ctx: Context<InitPool>, fee_bps: u16) -> Result<()> {
+pub fn init_pool_handler(ctx: Context<InitPool>, fee_bps: u16) -> Result<()> {
     require!(fee_bps <= 10_000, AmmError::InvalidFee);
 
     let pool = &mut ctx.accounts.pool;

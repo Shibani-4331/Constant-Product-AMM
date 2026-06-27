@@ -17,6 +17,10 @@ pub mod constant_product_amm {
     use super::*;
 
     pub fn init_pool(ctx: Context<InitPool>, fee_bps: u16) -> Result<()> {
-        instructions::init_pool::handler(ctx, fee_bps)
+        instructions::init_pool::init_pool_handler(ctx, fee_bps)
+    }
+
+    pub fn add_liquidity(ctx: Context<AddLiquidity>, amount_a: u64, amount_b: u64, min_lp_out: u64) -> Result<()> {
+        instructions::add_liquidity::add_liquidity_handler(ctx, amount_a, amount_b, min_lp_out)
     }
 }
