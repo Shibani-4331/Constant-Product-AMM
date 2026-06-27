@@ -16,7 +16,7 @@ declare_id!("5PggfhjuVtYnC8KoAKJKchVXDWssRTvLnsHb3WHzGygQ");
 pub mod constant_product_amm {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        initialize::handler(ctx)
+    pub fn init_pool(ctx: Context<InitPool>, fee_bps: u16) -> Result<()> {
+        instructions::init_pool::handler(ctx, fee_bps)
     }
 }
