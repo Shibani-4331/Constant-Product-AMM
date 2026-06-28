@@ -1,98 +1,78 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, MintTo, Transfer};
+use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
 use crate::state::Pool;
 use crate::error::AmmError;
-use crate::math::{initial_lp_amount, proportional_lp_amount};
+use crate::math::withdraw_amount;
 
-pub fn add_liquidity_handler(
-    ctx: Context<AddLiquidity>,
-    amount_a: u64,
-    amount_b: u64,
-    min_lp_out: u64,
+pub fn remove_liquidity_handler(
+    ctx: Context<RemoveLiquidity>,
+    lp_amount: u64,
+    min_amount_a: u64,
+    min_amount_b: u64,
 ) -> Result<()> {
-    require!(amount_a > 0 && amount_b > 0, AmmError::ZeroAmount);
+    require!(lp_amount > 0, AmmError::ZeroAmount);
 
     let pool = &ctx.accounts.pool;
     let reserve_a = ctx.accounts.vault_a.amount;
     let reserve_b = ctx.accounts.vault_b.amount;
     let lp_supply = ctx.accounts.lp_mint.supply;
 
-    let (used_a, used_b, lp_to_mint) = if lp_supply == 0 {
-        let lp = initial_lp_amount(amount_a, amount_b)?;
-        (amount_a, amount_b, lp)
-    } else {
-        let lp_from_a = proportional_lp_amount(amount_a, reserve_a, lp_supply)?;
-        let lp_from_b = proportional_lp_amount(amount_b, reserve_b, lp_supply)?;
+    let amount_a_out = withdraw_amount(lp_amount, reserve_a, lp_supply)?;
+    let amount_b_out = withdraw_amount(lp_amount, reserve_b, lp_supply)?;
 
-        if lp_from_a <= lp_from_b {
+    require!(amount_a_out >= min_amount_a, AmmError::SlippageExceeded);
+    require!(amount_b_out >= min_amount_b, AmmError::SlippageExceeded);
+    require!(amount_a_out > 0 && amount_b_out > 0, AmmError::InsufficientLiquidity);
 
-            let matched_b = (amount_a as u128)
-                .checked_mul(reserve_b as u128)
-                .ok_or(AmmError::MathOverflow)?
-                .checked_div(reserve_a as u128)
-                .ok_or(AmmError::MathOverflow)? as u64;
-            (amount_a, matched_b, lp_from_a)
-        } else {
-            let matched_a = (amount_b as u128)
-                .checked_mul(reserve_a as u128)
-                .ok_or(AmmError::MathOverflow)?
-                .checked_div(reserve_b as u128)
-                .ok_or(AmmError::MathOverflow)? as u64;
-            (matched_a, amount_b, lp_from_b)
-        }
-    };
-
-    require!(lp_to_mint >= min_lp_out, AmmError::SlippageExceeded);
-    require!(lp_to_mint > 0, AmmError::ZeroAmount);
-
-
-    token::transfer(
+    
+    token::burn(
         CpiContext::new(
             ctx.accounts.token_program.key(),
-            Transfer {
-                from: ctx.accounts.user_token_a.to_account_info(),
-                to: ctx.accounts.vault_a.to_account_info(),
+            Burn {
+                mint: ctx.accounts.lp_mint.to_account_info(),
+                from: ctx.accounts.user_lp_token.to_account_info(),
                 authority: ctx.accounts.user.to_account_info(),
             },
         ),
-        used_a,
-    )?;
-
-  
-    token::transfer(
-        CpiContext::new(
-            ctx.accounts.token_program.key(),
-            Transfer {
-                from: ctx.accounts.user_token_b.to_account_info(),
-                to: ctx.accounts.vault_b.to_account_info(),
-                authority: ctx.accounts.user.to_account_info(),
-            },
-        ),
-        used_b,
+        lp_amount,
     )?;
 
     let pool_key = pool.key();
     let seeds = &[b"authority", pool_key.as_ref(), &[pool.authority_bump]];
     let signer_seeds = &[&seeds[..]];
 
-    token::mint_to(
+    
+    token::transfer(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.key(),
-            MintTo {
-                mint: ctx.accounts.lp_mint.to_account_info(),
-                to: ctx.accounts.user_lp_token.to_account_info(),
+            Transfer {
+                from: ctx.accounts.vault_a.to_account_info(),
+                to: ctx.accounts.user_token_a.to_account_info(),
                 authority: ctx.accounts.pool_authority.to_account_info(),
             },
             signer_seeds,
         ),
-        lp_to_mint,
+        amount_a_out,
+    )?;
+
+    token::transfer(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.key(),
+            Transfer {
+                from: ctx.accounts.vault_b.to_account_info(),
+                to: ctx.accounts.user_token_b.to_account_info(),
+                authority: ctx.accounts.pool_authority.to_account_info(),
+            },
+            signer_seeds,
+        ),
+        amount_b_out,
     )?;
 
     Ok(())
 }
 
 #[derive(Accounts)]
-pub struct AddLiquidity<'info> {
+pub struct RemoveLiquidity<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 

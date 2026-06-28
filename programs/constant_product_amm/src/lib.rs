@@ -27,4 +27,8 @@ pub mod constant_product_amm {
     pub fn swap(ctx: Context<Swap>, amount_in: u64, min_amount_out: u64) -> Result<()> {
         instructions::swap::swap_handler(ctx, amount_in, min_amount_out)
     }
+    
+    pub fn remove_liquidity(ctx: Context<RemoveLiquidity>, lp_amount: u64, min_amount_a: u64, min_amount_b: u64) -> Result<()> {
+        instructions::remove_liquidity::remove_liquidity_handler(ctx, lp_amount, min_amount_a, min_amount_b)
+    }
 }
