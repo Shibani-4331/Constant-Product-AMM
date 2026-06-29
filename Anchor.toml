@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-constant_product_amm = "5PggfhjuVtYnC8KoAKJKchVXDWssRTvLnsHb3WHzGygQ"
+constant_product_amm = "9arTu5r1q2hAoNveV1hznrmBsaLBuvRneG7tqEygXaCT"
 
 [provider]
 cluster = "localnet"

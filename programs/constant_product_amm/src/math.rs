@@ -55,20 +55,16 @@ pub fn swap_output_amount(amount_in: u64, reserve_in: u64, reserve_out: u64, fee
         .checked_sub(fee_amount)
         .ok_or(AmmError::MathOverflow)?;
 
-    let k = (reserve_in as u128)
-        .checked_mul(reserve_out as u128)
+    let numerator = (reserve_out as u128)
+        .checked_mul(amount_in_after_fee)
         .ok_or(AmmError::MathOverflow)?;
 
-    let new_reserve_in = (reserve_in as u128)
+    let denominator = (reserve_in as u128)
         .checked_add(amount_in_after_fee)
         .ok_or(AmmError::MathOverflow)?;
 
-    let new_reserve_out = k
-        .checked_div(new_reserve_in)
-        .ok_or(AmmError::MathOverflow)?;
-
-    let amount_out = (reserve_out as u128)
-        .checked_sub(new_reserve_out)
+    let amount_out = numerator
+        .checked_div(denominator)
         .ok_or(AmmError::MathOverflow)?;
 
     Ok(amount_out as u64)
