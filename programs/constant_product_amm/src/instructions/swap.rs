@@ -75,10 +75,16 @@ pub struct Swap<'info> {
     )]
     pub pool_authority: UncheckedAccount<'info>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = vault_in.key() == pool.vault_a || vault_in.key() == pool.vault_b @ AmmError::InvalidVault,
+    )]
     pub vault_in: Box<Account<'info, TokenAccount>>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = vault_out.key() == pool.vault_a || vault_out.key() == pool.vault_b @ AmmError::InvalidVault,
+    )]
     pub vault_out: Box<Account<'info, TokenAccount>>,
 
     #[account(mut, constraint = user_source.owner == user.key() @ AmmError::InvalidMint)]
