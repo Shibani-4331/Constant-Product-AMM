@@ -37,6 +37,59 @@ fn create_mint_instructions(
 }
 
 #[test]
+fn test_init_pool_fails_with_same_mint() {
+    let program_id = constant_product_amm::id();
+    let payer = Keypair::new();
+    let mint_kp = Keypair::new();
+
+    let mut svm = LiteSVM::new();
+    let bytes = include_bytes!("../../../target/deploy/constant_product_amm.so");
+    svm.add_program(program_id, bytes).unwrap();
+    svm.airdrop(&payer.pubkey(), 5_000_000_000).unwrap();
+
+    let rent_lamports = Rent::default().minimum_balance(82);
+    let ixs = create_mint_instructions(&payer.pubkey(), &mint_kp.pubkey(), 6, rent_lamports);
+    let blockhash = svm.latest_blockhash();
+    let msg = Message::new_with_blockhash(&ixs, Some(&payer.pubkey()), &blockhash);
+    let tx = VersionedTransaction::try_new(VersionedMessage::Legacy(msg), &[&payer, &mint_kp]).unwrap();
+    svm.send_transaction(tx).unwrap();
+
+    let mint = mint_kp.pubkey();
+    let (pool, _) = Pubkey::find_program_address(&[b"pool", mint.as_ref(), mint.as_ref()], &program_id);
+    let (pool_authority, _) = Pubkey::find_program_address(&[b"authority", pool.as_ref()], &program_id);
+    let (vault_a, _) = Pubkey::find_program_address(&[b"vault_a", pool.as_ref()], &program_id);
+    let (vault_b, _) = Pubkey::find_program_address(&[b"vault_b", pool.as_ref()], &program_id);
+    let (lp_mint, _) = Pubkey::find_program_address(&[b"lp_mint", pool.as_ref()], &program_id);
+
+    let accounts = constant_product_amm::accounts::InitPool {
+        payer: payer.pubkey(),
+        token_a_mint: mint,
+        token_b_mint: mint,
+        pool,
+        pool_authority,
+        vault_a,
+        vault_b,
+        lp_mint,
+        token_program: spl_token::id(),
+        system_program: system_program::id(),
+        rent: anchor_lang::prelude::Rent::id(),
+    };
+
+    let ix = Instruction::new_with_bytes(
+        program_id,
+        &constant_product_amm::instruction::InitPool { fee_bps: 30 }.data(),
+        accounts.to_account_metas(None),
+    );
+
+    let blockhash = svm.latest_blockhash();
+    let msg = Message::new_with_blockhash(&[ix], Some(&payer.pubkey()), &blockhash);
+    let tx = VersionedTransaction::try_new(VersionedMessage::Legacy(msg), &[&payer]).unwrap();
+
+    let res = svm.send_transaction(tx);
+    assert!(res.is_err(), "init_pool should fail when both mints are the same");
+}
+
+#[test]
 fn test_init_pool_creates_pool_correctly() {
     let program_id = constant_product_amm::id();
     let payer = Keypair::new();
