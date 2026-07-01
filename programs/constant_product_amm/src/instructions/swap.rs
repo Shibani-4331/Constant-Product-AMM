@@ -87,10 +87,10 @@ pub struct Swap<'info> {
     )]
     pub vault_out: Box<Account<'info, TokenAccount>>,
 
-    #[account(mut, constraint = user_source.owner == user.key() @ AmmError::InvalidMint)]
+    #[account(mut, constraint = user_source.owner == user.key() @ AmmError::InvalidOwner)]
     pub user_source: Box<Account<'info, TokenAccount>>,
 
-    #[account(mut, constraint = user_destination.owner == user.key() @ AmmError::InvalidMint)]
+    #[account(mut, constraint = user_destination.owner == user.key() @ AmmError::InvalidOwner)]
     pub user_destination: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,

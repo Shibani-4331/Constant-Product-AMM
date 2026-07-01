@@ -22,4 +22,7 @@ pub enum AmmError {
 
     #[msg("Invalid fee value")]
     InvalidFee,
+
+    #[msg("Provided token account is not owned by the user")]
+    InvalidOwner,
 }

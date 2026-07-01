@@ -10,7 +10,7 @@ pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("9arTu5r1q2hAoNveV1hznrmBsaLBuvRneG7tqEygXaCT");
+declare_id!("7Hr5ygzGZYj3oaQBX6SQtacuGzXJfctv6R94FkXKStSx");
 
 #[program]
 pub mod constant_product_amm {
