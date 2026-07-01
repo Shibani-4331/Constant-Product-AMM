@@ -6,9 +6,15 @@ use crate::error::AmmError;
 pub fn init_pool_handler(ctx: Context<InitPool>, fee_bps: u16) -> Result<()> {
     require!(fee_bps <= 10_000, AmmError::InvalidFee);
 
+    let mint_a = ctx.accounts.token_a_mint.key();
+    let mint_b = ctx.accounts.token_b_mint.key();
+
+    require!(mint_a != mint_b, AmmError::InvalidMint);
+    require!(mint_a < mint_b, AmmError::InvalidMint);
+
     let pool = &mut ctx.accounts.pool;
-    pool.token_a_mint = ctx.accounts.token_a_mint.key();
-    pool.token_b_mint = ctx.accounts.token_b_mint.key();
+    pool.token_a_mint = mint_a;
+    pool.token_b_mint = mint_b;
     pool.vault_a = ctx.accounts.vault_a.key();
     pool.vault_b = ctx.accounts.vault_b.key();
     pool.lp_mint = ctx.accounts.lp_mint.key();
